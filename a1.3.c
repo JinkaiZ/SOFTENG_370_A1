@@ -76,7 +76,6 @@ int depth = 0;
 /* Merge sort the data. */
 void *merge_sort(void *block) {
     struct block *merge_block = (struct block *)block;
-    depth++;
     if (merge_block->size > SPLIT) {
         struct block left_block;
         struct block right_block;
@@ -87,8 +86,10 @@ void *merge_sort(void *block) {
 
 
      if(depth < 3){
+
         pthread_t thread;
         pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
+        depth++
         count++;
         pthread_join(thread,NULL);
  }
