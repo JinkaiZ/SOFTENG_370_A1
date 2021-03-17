@@ -9,9 +9,9 @@
     adjustments and additions to this code.
  */
 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <unistd.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <stdbool.h>
@@ -72,9 +72,11 @@ void merge(struct block *left, struct block *right) {
     free(combined);
 }
 int count = 0;
+int depth = 0;
 /* Merge sort the data. */
 void *merge_sort(void *block) {
     struct block *merge_block = (struct block *)block;
+    depth++;
     if (merge_block->size > SPLIT) {
         struct block left_block;
         struct block right_block;
@@ -84,19 +86,22 @@ void *merge_sort(void *block) {
         right_block.data = merge_block->data + left_block.size;
 
 
-
+     if(depth < 3){
         pthread_t thread;
-        int s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-     
-        
-        merge_sort(&right_block);
-        
-        if(s==0){
-        count++;
+        pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
+        count++
+ }
+ else{
+	 merge_sort(&left_block);
+ }
+
+
+
+
         pthread_join(thread,NULL);
-    
-        }
-        
+
+
+
         merge(&left_block, &right_block);
 
     } else {
@@ -149,7 +154,7 @@ int main(int argc, char *argv[]) {
     times(&start_times);
 
     merge_sort(&block);
-    
+
     gettimeofday(&finish_wall_time, NULL);
     times(&finish_times);
     timersub(&finish_wall_time, &start_wall_time, &wall_time);
@@ -164,6 +169,7 @@ int main(int argc, char *argv[]) {
     free(block.data);
 
     printf("Total threads created : %d \n",count);
+    printf("Total level : %d \n",depth);
 
 
     exit(EXIT_SUCCESS);
