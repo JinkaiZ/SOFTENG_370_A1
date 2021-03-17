@@ -91,15 +91,17 @@ void *merge_sort(void *block) {
         pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
         depth++;
         count++;
+        merge_sort(&right_block);
         pthread_join(thread,NULL);
  }
  else{
 	 merge_sort(&left_block);
+	 merge_sort(&right_block);
  }
 
 
 
-    merge_sort(&right_block);
+
 
 
 
