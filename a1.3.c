@@ -89,7 +89,8 @@ void *merge_sort(void *block) {
      if(depth < 3){
         pthread_t thread;
         pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-        count++
+        count++;
+        pthread_join(thread,NULL);
  }
  else{
 	 merge_sort(&left_block);
@@ -98,7 +99,7 @@ void *merge_sort(void *block) {
 
 
 
-        pthread_join(thread,NULL);
+
 
 
 
