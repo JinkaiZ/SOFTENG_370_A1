@@ -89,7 +89,7 @@ void *merge_sort(void *block) {
 
         pthread_t thread;
         pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-        depth++
+        depth++;
         count++;
         pthread_join(thread,NULL);
  }
@@ -99,7 +99,7 @@ void *merge_sort(void *block) {
 
 
 
-
+    merge_sort(&right_block);
 
 
 
