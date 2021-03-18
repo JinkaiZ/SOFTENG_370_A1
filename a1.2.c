@@ -24,9 +24,15 @@
 #define MAX     1000
 #define SPLIT   16
 
-struct block {
-    int size;
-    int *data;
+
+struct combine {
+        struct block {
+            int size;
+            int *data;
+        }block;
+
+
+    int count;
 };
 
 
@@ -71,36 +77,39 @@ void merge(struct block *left, struct block *right) {
     memmove(left->data, combined, (left->size + right->size) * sizeof(int));
     free(combined);
 }
-int count = 0;
+
 /* Merge sort the data. */
-void *merge_sort(void *block) {
-    struct block *merge_block = (struct block *)block;
-    if (merge_block->size > SPLIT) {
+void *merge_sort(void *combine) {
+    struct combine *merge_combine = (struct combine *)combine;
+
+    if (merge_combine->block.size > SPLIT) {
         struct block left_block;
         struct block right_block;
-        left_block.size = merge_block->size / 2;
-        left_block.data = merge_block->data;
-        right_block.size = merge_block->size - left_block.size; // left_block.size + (block->size % 2);
-        right_block.data = merge_block->data + left_block.size;
+        left_block.size = merge_combine->block.size / 2;
+        left_block.data = merge_combine->block.data;
+        right_block.size = merge_combine->block.size - left_block.size; // left_block.size + (block->size % 2);
+        right_block.data = merge_combine->block.data + left_block.size;
 
 
 
         pthread_t thread;
         int s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-     
-        
+
         merge_sort(&right_block);
-        
+
         if(s==0){
-        count++;
         pthread_join(thread,NULL);
+        merge_combine->count+= 1;
+        }
+        else{
+            merge_sort(&left_block);
         }
       
         
         merge(&left_block, &right_block);
 
     } else {
-        insertion_sort(merge_block);
+        insertion_sort(&merge_combine->block);
     }
 }
 
@@ -131,24 +140,26 @@ int main(int argc, char *argv[]) {
         } else {
                 size = atol(argv[1]);
         }
-    struct block block;
-    block.size = (int)pow(2, size);
-    block.data = (int *)calloc(block.size, sizeof(int));
+
+        struct combine combine;
+    combine.block.size = (int)pow(2, size);
+    combine.count = 0;
+    combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
 
 
-    if (block.data == NULL) {
+    if (combine.block.data == NULL) {
         perror("Unable to allocate space for data.\n");
         exit(EXIT_FAILURE);
     }
 
-    produce_random_data(&block);
+    produce_random_data(&combine.block);
 
     struct timeval start_wall_time, finish_wall_time, wall_time;
     struct tms start_times, finish_times;
     gettimeofday(&start_wall_time, NULL);
     times(&start_times);
 
-    merge_sort(&block);
+    merge_sort(&combine);
     
     gettimeofday(&finish_wall_time, NULL);
     times(&finish_times);
@@ -157,13 +168,13 @@ int main(int argc, char *argv[]) {
     printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
     printf("wall time %ld secs and %ld microseconds\n", wall_time.tv_sec, wall_time.tv_usec);
 
-    if (block.size < 1025)
-        print_data(&block);
+    if (combine.block.size < 1025)
+        print_data(&combine.block);
 
-    printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
-    free(block.data);
+    printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
+    free(combine.block.data);
 
-    printf("Total threads created : %d \n",count);
+    printf("Total threads created : %d \n",combine.count);
 
 
     exit(EXIT_SUCCESS);
