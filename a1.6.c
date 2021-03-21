@@ -116,7 +116,7 @@ void *merge_sort(void *combine) {
                 exit(EXIT_FAILURE);
             }
 
-            int pipe_sz = fcntl(my_pipe[1], F_SETPIPE_SZ, (sizeof(int)) * left_block.block.size);
+           // int pipe_sz = fcntl(my_pipe[1], F_SETPIPE_SZ, (sizeof(int)) * left_block.block.size);
 
             pid = fork();
             printf("Process created \n");
@@ -137,7 +137,7 @@ void *merge_sort(void *combine) {
 
                 merge(&left_block.block, &right_block.block);
 
-
+                printf(is_sorted(&merge_combine->block) ? "sorted\n" : "not sorted\n");
             }
             else{
 
@@ -210,10 +210,10 @@ int main(int argc, char *argv[]) {
     if (combine.block.size < 1025)
         print_data(&combine.block);
 
-    printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
+
     free(combine.block.data);
 
-
+//system("ps -l");
 
     exit(EXIT_SUCCESS);
 }
