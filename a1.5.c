@@ -179,6 +179,11 @@ int main(int argc, char *argv[]) {
 
     produce_random_data(&block);
 
+    struct timeval start_wall_time, finish_wall_time, wall_time;
+    struct tms start_times, finish_times;
+
+    gettimeofday(&start_wall_time, NULL);
+    times(&start_times);
     //Split the block into two part.
     struct block left_block;
     struct block right_block;
@@ -218,12 +223,6 @@ int main(int argc, char *argv[]) {
             print_data(&block);
 
         printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
-        struct timeval start_wall_time, finish_wall_time, wall_time;
-        struct tms start_times, finish_times;
-
-        gettimeofday(&start_wall_time, NULL);
-        times(&start_times);
-
 
         gettimeofday(&finish_wall_time, NULL);
         times(&finish_times);
@@ -231,6 +230,8 @@ int main(int argc, char *argv[]) {
         printf("start time in clock ticks: %ld\n", start_times.tms_utime);
         printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
         printf("wall time %ld secs and %ld microseconds\n", wall_time.tv_sec, wall_time.tv_usec);
+        free(block.data);
+        exit(EXIT_SUCCESS);
     }
     else{
         close(my_pipe[0]);
@@ -238,11 +239,9 @@ int main(int argc, char *argv[]) {
 
         int w = write(my_pipe[1],left_block.data,left_block.size * (sizeof(int)));
         printf("The writing result %d \n",w);
-
-
+        return 0;
     }
 
 
-    free(block.data);
-    exit(EXIT_SUCCESS);
+
 }
