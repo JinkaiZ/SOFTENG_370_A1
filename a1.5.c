@@ -8,7 +8,7 @@
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
  */
-
+#define _GNU_SOURCE
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <unistd.h> 
@@ -19,10 +19,12 @@
 #include <sys/times.h>
 #include <math.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #define SIZE    4
 #define MAX     1000
 #define SPLIT   16
+
 
 struct block {
     int size;
@@ -107,6 +109,58 @@ void produce_random_data(struct block *block) {
     }
 }
 
+//void sort_two_process(struct block *block){
+//
+//    //Split the block into two part.
+//    struct block left_block;
+//    struct block right_block;
+//
+//    left_block.size = block->size/2;
+//    left_block.data = block->data;
+//
+//    right_block.size = block->size - left_block.size;
+//    right_block.data = block->data + left_block.size;
+//
+//
+//    int my_pipe[2], pid;
+//
+//    if(pipe(my_pipe) < 0){
+//        perror("Creating pipe");
+//        exit(EXIT_FAILURE);
+//    }
+//
+//    pid = fork();
+//
+//    if(pid <0) {
+//        fprintf(stderr, "Fork failed");
+//        exit(EXIT_FAILURE);
+//    }
+//    else if (pid == 0){
+//        close(my_pipe[0]);
+//        merge_sort(&left_block);
+//        int w = write(my_pipe[1],left_block.data,left_block.size * (sizeof(int)));
+//        printf("The writing result %d \n",w);
+//
+//
+//    }
+//    else{
+//        // Close input
+//        close(my_pipe[1]);
+//        merge_sort(&right_block);
+//        read(my_pipe[0],left_block.data,left_block.size * (sizeof(int)));
+//        close(my_pipe[0]);
+//
+//        merge(&left_block, &right_block);
+//
+//        if (block.size < 1025)
+//            print_data(&block);
+//
+//        printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
+//
+//
+//    }
+//}
+
 int main(int argc, char *argv[]) {
         long size;
 
@@ -135,27 +189,60 @@ int main(int argc, char *argv[]) {
     right_block.size = block.size - left_block.size;
     right_block.data = block.data + left_block.size;
 
-    struct timeval start_wall_time, finish_wall_time, wall_time;
-    struct tms start_times, finish_times;
-    gettimeofday(&start_wall_time, NULL);
-    times(&start_times);
 
-    pthread_t thread;
-    pthread_create(&thread, NULL,merge_sort, (void *)&left_block);
-    merge_sort(&right_block);
-    pthread_join(thread, NULL);
-    merge(&left_block, &right_block);
-    gettimeofday(&finish_wall_time, NULL);
-    times(&finish_times);
-    timersub(&finish_wall_time, &start_wall_time, &wall_time);
-    printf("start time in clock ticks: %ld\n", start_times.tms_utime);
-    printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
-    printf("wall time %ld secs and %ld microseconds\n", wall_time.tv_sec, wall_time.tv_usec);
+    int my_pipe[2], pid;
 
-    if (block.size < 1025)
-        print_data(&block);
+    if(pipe(my_pipe) < 0){
+        perror("Creating pipe");
+        exit(EXIT_FAILURE);
+    }
 
-    printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
+    int pipe_sz = fcntl(my_pipe[1], F_SETPIPE_SZ, (sizeof(int)) * left_block.size);
+
+    pid = fork();
+
+    if(pid <0) {
+        fprintf(stderr, "Fork failed");
+        exit(EXIT_FAILURE);
+    }
+    else if (pid > 0){
+        // Close input
+        close(my_pipe[1]);
+        merge_sort(&right_block);
+        read(my_pipe[0],left_block.data,left_block.size * (sizeof(int)));
+        close(my_pipe[0]);
+
+        merge(&left_block, &right_block);
+
+        if (block.size < 1025)
+            print_data(&block);
+
+        printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
+        struct timeval start_wall_time, finish_wall_time, wall_time;
+        struct tms start_times, finish_times;
+
+        gettimeofday(&start_wall_time, NULL);
+        times(&start_times);
+
+
+        gettimeofday(&finish_wall_time, NULL);
+        times(&finish_times);
+        timersub(&finish_wall_time, &start_wall_time, &wall_time);
+        printf("start time in clock ticks: %ld\n", start_times.tms_utime);
+        printf("finish time in clock ticks: %ld\n", finish_times.tms_utime);
+        printf("wall time %ld secs and %ld microseconds\n", wall_time.tv_sec, wall_time.tv_usec);
+    }
+    else{
+        close(my_pipe[0]);
+        merge_sort(&left_block);
+
+        int w = write(my_pipe[1],left_block.data,left_block.size * (sizeof(int)));
+        printf("The writing result %d \n",w);
+
+
+    }
+
+
     free(block.data);
     exit(EXIT_SUCCESS);
 }
