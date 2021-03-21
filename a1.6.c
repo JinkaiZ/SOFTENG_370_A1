@@ -9,9 +9,10 @@
     adjustments and additions to this code.
  */
 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <unistd.h> 
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <stdbool.h>
@@ -19,6 +20,7 @@
 #include <sys/times.h>
 #include <math.h>
 #include <pthread.h>
+#include <fcntl.h>
 
 #define SIZE    4
 #define MAX     1000
@@ -32,7 +34,7 @@ struct combine {
         }block;
 
     int depth;
-    int count;
+
 };
 
 
@@ -78,6 +80,16 @@ void merge(struct block *left, struct block *right) {
     free(combined);
 }
 
+/* Check to see if the data is sorted. */
+bool is_sorted(struct block *block) {
+    bool sorted = true;
+    for (int i = 0; i < block->size - 1; i++) {
+        if (block->data[i] > block->data[i + 1])
+            sorted = false;
+    }
+    return sorted;
+}
+
 /* Merge sort the data. */
 void *merge_sort(void *combine) {
     struct combine *merge_combine = (struct combine *)combine;
@@ -89,43 +101,64 @@ void *merge_sort(void *combine) {
         left_block.block.data = merge_combine->block.data;
         right_block.block.size = merge_combine->block.size - left_block.block.size; // left_block.size + (block->size % 2);
         right_block.block.data = merge_combine->block.data + left_block.block.size;
-        left_block.depth = merge_combine->depth +1;
-        right_block.depth = merge_combine->depth + 1;
+       left_block.depth = merge_combine->depth +1;
+       right_block.depth = merge_combine->depth + 1;
+
+
 
 
         if (left_block.depth < 3) {
-            s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-            printf("thread created \n");
 
-        }
+            int my_pipe[2], pid;
 
-        merge_sort(&right_block);
+            if(pipe(my_pipe) < 0){
+                perror("Creating pipe");
+                exit(EXIT_FAILURE);
+            }
 
-        if(s == 0){
-            printf("thread join \n");
-            pthread_join(thread,NULL);
-            merge_combine->count+= 1;
+            int pipe_sz = fcntl(my_pipe[1], F_SETPIPE_SZ, (sizeof(int)) * left_block.block.size);
+
+            pid = fork();
+            printf("Process created \n");
+
+
+            if(pid <0) {
+                fprintf(stderr, "Fork failed");
+                exit(EXIT_FAILURE);
+            }
+
+            else if (pid > 0){
+                // Close input
+
+                close(my_pipe[1]);
+                merge_sort(&right_block);
+                read(my_pipe[0],left_block.block.data,left_block.block.size * (sizeof(int)));
+                close(my_pipe[0]);
+
+                merge(&left_block.block, &right_block.block);
+
+
+            }
+            else{
+
+                close(my_pipe[0]);
+                merge_sort(&left_block);
+
+                int w = write(my_pipe[1],left_block.block.data,left_block.block.size * (sizeof(int)));
+                printf("The writing result %d \n",w);
+                return 0;
+            }
         }
         else{
+            merge_sort(&right_block);
             merge_sort(&left_block);
+            merge(&left_block.block, &right_block.block);
         }
-      
-        
-        merge(&left_block.block, &right_block.block);
 
     } else {
+
         insertion_sort(&merge_combine->block);
     }
-}
-
-/* Check to see if the data is sorted. */
-bool is_sorted(struct block *block) {
-    bool sorted = true;
-    for (int i = 0; i < block->size - 1; i++) {
-        if (block->data[i] > block->data[i + 1])
-            sorted = false;
-    }
-    return sorted;
 }
 
 /* Fill the array with random data. */
@@ -166,7 +199,7 @@ int main(int argc, char *argv[]) {
     times(&start_times);
 
     merge_sort(&combine);
-    
+
     gettimeofday(&finish_wall_time, NULL);
     times(&finish_times);
     timersub(&finish_wall_time, &start_wall_time, &wall_time);
@@ -180,7 +213,6 @@ int main(int argc, char *argv[]) {
     printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
     free(combine.block.data);
 
-    printf("total threads : %d \n",combine.count);
 
 
     exit(EXIT_SUCCESS);
