@@ -74,22 +74,27 @@ void merge(struct block *left, struct block *right) {
 }
 
 /* Merge sort the data. */
-void *merge_sort(void *block) {
-    struct block *merge_block = (struct block *) block;
-    if (merge_block->size > SPLIT) {
+/* Merge sort the data. */
+void merge_sort(struct block *block)
+{
+    if (block->size > SPLIT)
+    {
         struct block left_block;
         struct block right_block;
-        left_block.size = merge_block->size / 2;
-        left_block.data = merge_block->data;
-        right_block.size = merge_block->size - left_block.size; // left_block.size + (block->size % 2);
-        right_block.data = merge_block->data + left_block.size;
+        left_block.size = block->size / 2;
+        left_block.data = block->data;
+        right_block.size = block->size - left_block.size; // left_block.size + (block->size % 2);
+        right_block.data = block->data + left_block.size;
         merge_sort(&left_block);
         merge_sort(&right_block);
         merge(&left_block, &right_block);
-    } else {
-        insertion_sort(merge_block);
+    }
+    else
+    {
+        insertion_sort(block);
     }
 }
+
 
 /* Check to see if the data is sorted. */
 bool is_sorted(struct block *block) {
@@ -195,16 +200,18 @@ int main(int argc, char *argv[]) {
     right_block.data = block.data + left_block.size;
 
 
-    int my_pipe[2], pid;
+    int my_pipe[2];
 
     if(pipe(my_pipe) < 0){
         perror("Creating pipe");
         exit(EXIT_FAILURE);
     }
 
-    int pipe_sz = fcntl(my_pipe[1], F_SETPIPE_SZ, (sizeof(int)) * left_block.size);
+    int total_bytes_to_read = sizeof(int) * left_block.size;
+    int max_allowed_bytes = 65536;
+    int sizeT = total_bytes_to_read / max_allowed_bytes;
 
-    pid = fork();
+    pid_t pid = fork();
 
     if(pid <0) {
         fprintf(stderr, "Fork failed");
@@ -214,15 +221,21 @@ int main(int argc, char *argv[]) {
         // Close input
         close(my_pipe[1]);
         merge_sort(&right_block);
-        read(my_pipe[0],left_block.data,left_block.size * (sizeof(int)));
-        close(my_pipe[0]);
 
+
+        //printf("The total bytes is %d, size is %d",total_bytes_to_read,size);
+        for(int i = 0; i<sizeT;i++){
+        int reading = read(my_pipe[0], &left_block.data[(i * 65536)/sizeof(int)], 65536);
+               printf("The reading is %d \n", reading);
+        }
+        close(my_pipe[0]);
         merge(&left_block, &right_block);
 
         if (block.size < 1025)
             print_data(&block);
 
         printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
+
 
         gettimeofday(&finish_wall_time, NULL);
         times(&finish_times);
@@ -234,12 +247,19 @@ int main(int argc, char *argv[]) {
         exit(EXIT_SUCCESS);
     }
     else{
+
+
+
         close(my_pipe[0]);
         merge_sort(&left_block);
+        for(int i = 0; i< sizeT; i++) {
+        int w = write(my_pipe[1], &left_block.data[(i * 65536)/sizeof(int)], 65536);
+           // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
+           printf("The writing result %d \n", w);
 
-        int w = write(my_pipe[1],left_block.data,left_block.size * (sizeof(int)));
-        printf("The writing result %d \n",w);
-        return 0;
+       }
+        close(my_pipe[1]);
+            exit(EXIT_SUCCESS);
     }
 
 
