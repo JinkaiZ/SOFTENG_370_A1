@@ -114,57 +114,6 @@ void produce_random_data(struct block *block) {
     }
 }
 
-//void sort_two_process(struct block *block){
-//
-//    //Split the block into two part.
-//    struct block left_block;
-//    struct block right_block;
-//
-//    left_block.size = block->size/2;
-//    left_block.data = block->data;
-//
-//    right_block.size = block->size - left_block.size;
-//    right_block.data = block->data + left_block.size;
-//
-//
-//    int my_pipe[2], pid;
-//
-//    if(pipe(my_pipe) < 0){
-//        perror("Creating pipe");
-//        exit(EXIT_FAILURE);
-//    }
-//
-//    pid = fork();
-//
-//    if(pid <0) {
-//        fprintf(stderr, "Fork failed");
-//        exit(EXIT_FAILURE);
-//    }
-//    else if (pid == 0){
-//        close(my_pipe[0]);
-//        merge_sort(&left_block);
-//        int w = write(my_pipe[1],left_block.data,left_block.size * (sizeof(int)));
-//        printf("The writing result %d \n",w);
-//
-//
-//    }
-//    else{
-//        // Close input
-//        close(my_pipe[1]);
-//        merge_sort(&right_block);
-//        read(my_pipe[0],left_block.data,left_block.size * (sizeof(int)));
-//        close(my_pipe[0]);
-//
-//        merge(&left_block, &right_block);
-//
-//        if (block.size < 1025)
-//            print_data(&block);
-//
-//        printf(is_sorted(&block) ? "sorted\n" : "not sorted\n");
-//
-//
-//    }
-//}
 
 int main(int argc, char *argv[]) {
         long size;
@@ -222,11 +171,17 @@ int main(int argc, char *argv[]) {
         close(my_pipe[1]);
         merge_sort(&right_block);
 
+        if(left_block.size < 65536){
+            int reading = read(my_pipe[0], left_block.data, left_block.size * sizeof(int));
 
-        //printf("The total bytes is %d, size is %d",total_bytes_to_read,size);
-        for(int i = 0; i<sizeT;i++){
-        int reading = read(my_pipe[0], &left_block.data[(i * 65536)/sizeof(int)], 65536);
-               printf("The reading is %d \n", reading);
+            printf("The reading is %d \n", reading);
+        }
+        else {
+
+            for (int i = 0; i < sizeT; i++) {
+                int reading = read(my_pipe[0], &left_block.data[(i * 65536) / sizeof(int)], 65536);
+                printf("The reading is %d \n", reading);
+            }
         }
         close(my_pipe[0]);
         merge(&left_block, &right_block);
@@ -252,12 +207,21 @@ int main(int argc, char *argv[]) {
 
         close(my_pipe[0]);
         merge_sort(&left_block);
-        for(int i = 0; i< sizeT; i++) {
-        int w = write(my_pipe[1], &left_block.data[(i * 65536)/sizeof(int)], 65536);
-           // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
-           printf("The writing result %d \n", w);
 
-       }
+        if(left_block.size < 65536){
+            int w = write(my_pipe[1], left_block.data, left_block.size * sizeof(int));
+            // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
+            printf("The writing result %d \n", w);
+        }
+        else {
+
+            for (int i = 0; i < sizeT; i++) {
+                int w = write(my_pipe[1], &left_block.data[(i * 65536) / sizeof(int)], 65536);
+                // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
+                printf("The writing result %d \n", w);
+
+            }
+        }
         close(my_pipe[1]);
             exit(EXIT_SUCCESS);
     }
