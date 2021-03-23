@@ -21,6 +21,8 @@
 #include <math.h>
 #include <pthread.h>
 #include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
 
 #define SIZE    4
 #define MAX     1000
@@ -109,19 +111,7 @@ void *merge_sort(void *combine) {
 
         if (left_block.depth < 4) {
 
-            int total_bytes_to_read = sizeof(int) * left_block.block.size;
-            int max_allowed_bytes = 65536;
-            int sizeT = total_bytes_to_read / max_allowed_bytes;
-
-            int my_pipe[2];
-
-            if(pipe(my_pipe) < 0){
-                perror("Creating pipe");
-                exit(EXIT_FAILURE);
-            }
-
             pid_t pid = fork();
-
 
             if(pid <0) {
                 fprintf(stderr, "Fork failed");
@@ -129,47 +119,17 @@ void *merge_sort(void *combine) {
             }
 
             else if (pid > 0){
-                // Close input
-                close(my_pipe[1]);
+
                 merge_sort(&right_block);
-
-                if(left_block.block.size < 65536){
-                    int reading = read(my_pipe[0], left_block.block.data, left_block.block.size * sizeof(int));
-
-                    //printf("The reading is %d \n", reading);
-                }
-                else {
-
-                    for (int i = 0; i < sizeT; i++) {
-                        int reading = read(my_pipe[0], &left_block.block.data[(i * 65536) / sizeof(int)], 65536);
-                        //printf("The reading is %d \n", reading);
-                    }
-                }
-
-                close(my_pipe[0]);
+                wait(NULL);
                 merge(&left_block.block, &right_block.block);
+                munmap(NULL,merge_combine->block.size * sizeof(int));
 
             }
             else{
-                printf("Child process created, the depth is %d \n",left_block.depth);
-                close(my_pipe[0]);
+                printf("ChildProcess created ,the depth is %d \n",left_block.depth);
                 merge_sort(&left_block);
 
-                if(left_block.block.size < 65536){
-                    int w = write(my_pipe[1], left_block.block.data, left_block.block.size * sizeof(int));
-                    // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
-                    //printf("The writing result %d \n", w);
-                }
-                else {
-
-                    for (int i = 0; i < sizeT; i++) {
-                        int w = write(my_pipe[1], &left_block.block.data[(i * 65536) / sizeof(int)], 65536);
-                        //printf("The writing result %d \n", w);
-
-                    }
-                }
-
-                close(my_pipe[1]);
                 exit(EXIT_SUCCESS);
             }
 
@@ -208,7 +168,7 @@ int main(int argc, char *argv[]) {
     combine.block.size = (int)pow(2, size);
     //combine.count = 0;
     combine.depth = 0;
-    combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
+    combine.block.data = mmap(NULL, combine.block.size * sizeof(int), PROT_READ |PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1,0);
 
 
     if (combine.block.data == NULL) {
@@ -238,7 +198,6 @@ int main(int argc, char *argv[]) {
         print_data(&combine.block);
 
     printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
-    free(combine.block.data);
 
     exit(EXIT_SUCCESS);
 }

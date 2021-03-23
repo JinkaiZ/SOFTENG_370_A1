@@ -77,7 +77,7 @@ void merge(struct block *left, struct block *right) {
     memmove(left->data, combined, (left->size + right->size) * sizeof(int));
     free(combined);
 }
-
+int count = 0;
 /* Merge sort the data. */
 void *merge_sort(void *combine) {
     struct combine *merge_combine = (struct combine *)combine;
@@ -95,10 +95,9 @@ void *merge_sort(void *combine) {
         pthread_t thread;
         int s = 1;
 
-        if (left_block.depth < 3) {
+        if (left_block.depth < 4) {
             s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-            printf("thread created \n");
-
+            printf("thread created, the depth is %d \n",left_block.depth);
         }
 
         merge_sort(&right_block);
@@ -106,7 +105,7 @@ void *merge_sort(void *combine) {
         if(s == 0){
             printf("thread join \n");
             pthread_join(thread,NULL);
-            merge_combine->count+= 1;
+            count++;
         }
         else{
             merge_sort(&left_block);
@@ -150,7 +149,7 @@ int main(int argc, char *argv[]) {
 
         struct combine combine;
     combine.block.size = (int)pow(2, size);
-    //combine.count = 0;
+
     combine.depth = 0;
     combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
 
@@ -160,7 +159,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    produce_random_data(&combine);
+    produce_random_data(&combine.block);
 
     struct timeval start_wall_time, finish_wall_time, wall_time;
     struct tms start_times, finish_times;
@@ -182,7 +181,7 @@ int main(int argc, char *argv[]) {
     printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
     free(combine.block.data);
 
-    printf("total threads : %d \n",combine.count);
+    printf("total threads : %d \n",count);
 
 
     exit(EXIT_SUCCESS);
