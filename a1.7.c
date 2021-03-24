@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -76,7 +76,6 @@ void merge(struct block *left, struct block *right) {
 }
 
 /* Merge sort the data. */
-/* Merge sort the data. */
 void merge_sort(struct block *block)
 {
     if (block->size > SPLIT)
@@ -127,6 +126,7 @@ int main(int argc, char *argv[]) {
         }
     struct block block;
     block.size = (int)pow(2, size);
+    //Share the memory of block.data
     block.data = mmap(NULL, block.size * sizeof(int), PROT_READ |PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1,0);
     if (block.data == NULL) {
         perror("Unable to allocate space for data.\n");
@@ -160,8 +160,10 @@ int main(int argc, char *argv[]) {
     else if (pid > 0){
 
         merge_sort(&right_block);
+        //wait the child process to finish.
         wait(NULL);
         merge(&left_block, &right_block);
+        //stop the data sharing.
         munmap(NULL,block.size * sizeof(int));
         if (block.size < 1025)
             print_data(&block);
@@ -182,7 +184,5 @@ int main(int argc, char *argv[]) {
         merge_sort(&left_block);
             exit(EXIT_SUCCESS);
     }
-
-
 
 }

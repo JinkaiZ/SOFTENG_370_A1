@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -24,6 +24,8 @@
 #define MAX     1000
 #define SPLIT   16
 
+//Count the number of thread created.
+int count = 0;
 
 struct combine {
         struct block {
@@ -75,7 +77,7 @@ void merge(struct block *left, struct block *right) {
     memmove(left->data, combined, (left->size + right->size) * sizeof(int));
     free(combined);
 }
-int count = 0;
+
 /* Merge sort the data. */
 void *merge_sort(void *combine) {
     struct combine *merge_combine = (struct combine *)combine;
@@ -88,22 +90,21 @@ void *merge_sort(void *combine) {
         right_block.size = merge_combine->block.size - left_block.size; // left_block.size + (block->size % 2);
         right_block.data = merge_combine->block.data + left_block.size;
 
-
-
+        //Create a new thread to sort left block
         pthread_t thread;
         int s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-
+        //Merge the right block in the current thread.
         merge_sort(&right_block);
 
         if(s==0){
         pthread_join(thread,NULL);
             count++;
         }
+            //If the thread is not created. do the sort in the current thread.
         else{
             merge_sort(&left_block);
         }
-      
-        
+
         merge(&left_block, &right_block);
 
     } else {
@@ -155,7 +156,7 @@ int main(int argc, char *argv[]) {
     struct tms start_times, finish_times;
     gettimeofday(&start_wall_time, NULL);
     times(&start_times);
-
+    //If the thread is created
     merge_sort(&combine);
     
     gettimeofday(&finish_wall_time, NULL);

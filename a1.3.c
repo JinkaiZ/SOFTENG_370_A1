@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -77,7 +77,7 @@ void merge(struct block *left, struct block *right) {
     memmove(left->data, combined, (left->size + right->size) * sizeof(int));
     free(combined);
 }
-int count = 0;
+
 /* Merge sort the data. */
 void *merge_sort(void *combine) {
     struct combine *merge_combine = (struct combine *)combine;
@@ -95,17 +95,15 @@ void *merge_sort(void *combine) {
         pthread_t thread;
         int s = 1;
 
-        if (left_block.depth < 4) {
+        if (left_block.depth < 3) {
             s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
-            printf("thread created, the depth is %d \n",left_block.depth);
         }
 
         merge_sort(&right_block);
 
         if(s == 0){
-            printf("thread join \n");
+            printf("thread created, the depth is %d \n",left_block.depth);
             pthread_join(thread,NULL);
-            count++;
         }
         else{
             merge_sort(&left_block);
@@ -149,8 +147,7 @@ int main(int argc, char *argv[]) {
 
         struct combine combine;
     combine.block.size = (int)pow(2, size);
-
-    combine.depth = 0;
+    combine.depth = -1;
     combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
 
 
@@ -180,9 +177,6 @@ int main(int argc, char *argv[]) {
 
     printf(is_sorted(&combine.block) ? "sorted\n" : "not sorted\n");
     free(combine.block.data);
-
-    printf("total threads : %d \n",count);
-
 
     exit(EXIT_SUCCESS);
 }

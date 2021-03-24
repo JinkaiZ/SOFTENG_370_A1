@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -141,6 +141,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start_wall_time, NULL);
     times(&start_times);
 
+    //Create a new thread.
     pthread_t thread;
     pthread_create(&thread, NULL,merge_sort, (void *)&left_block);
     merge_sort(&right_block);

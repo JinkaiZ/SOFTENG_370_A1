@@ -26,15 +26,21 @@
 #define THREAD_NUM 7
 
 static pthread_mutex_t merge_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t merge_cond = PTHREAD_COND_INITIALIZER;
-static int count = 0;
-
-
+static pthread_cond_t main_cond = PTHREAD_COND_INITIALIZER;
+static pthread_cond_t thread_cond = PTHREAD_COND_INITIALIZER;
+static int thread_count = 0;
+static int work_count=0;
 
 struct block {
     int size;
     int *data;
 };
+
+struct thread_info {
+    pthread_t thread[THREAD_NUM];
+    struct block* block;
+};
+
 
 void print_data(struct block *block) {
     for (int i = 0; i < block->size; ++i)
@@ -58,6 +64,7 @@ void insertion_sort(struct block *block) {
 
 /* Combine the two halves back together. */
 void merge(struct block *left, struct block *right) {
+
     int *combined = calloc(left->size + right->size, sizeof(int));
     if (combined == NULL) {
         perror("Allocating space for merge.\n");
@@ -79,32 +86,39 @@ void merge(struct block *left, struct block *right) {
 }
 
 /* Merge sort the data. */
-void merge_sort(struct block *block) {
-    if (block->size > SPLIT) {
+void *merge_sort(void *block) {
+
+    pthread_mutex_lock(&merge_mutex);
+
+    struct block *merge_block = (struct block *) block;
+
+    if (merge_block->size > SPLIT) {
         struct block left_block;
         struct block right_block;
-        left_block.size = block->size / 2;
-        left_block.data = block->data;
-        right_block.size = block->size - left_block.size; // left_block.size + (block->size % 2);
-        right_block.data = block->data + left_block.size;
+        left_block.size = merge_block->size / 2;
+        left_block.data = merge_block->data;
+        right_block.size = merge_block->size - left_block.size; // left_block.size + (block->size % 2);
+        right_block.data = merge_block->data + left_block.size;
 
-        //Check is there a thread ready.
-        //If yes ass the task to it.
-        //else do it in this thread.
-        pthread_mutex_lock(&merge_mutex);
-        merge_sort(&left_block);
-        count++;
-        pthread_cond_signal(&merge_cond);
-        pthread_mutex_unlock(&merge_mutex);
+    thread_count++;
 
+    work_count++;
 
+    merge_sort(&left_block);
+
+    //no thread ready.
+    if(thread_count == THREAD_NUM){
         merge_sort(&right_block);
+        pthread_cond_wait(&thread_cond,&merge_mutex);
+    }
 
         //merge
         merge(&left_block, &right_block);
     } else {
         insertion_sort(block);
+        pthread_cond_signal(&thread_cond);
     }
+    pthread_mutex_unlock(&merge_mutex);
 }
 
 /* Check to see if the data is sorted. */
@@ -124,7 +138,26 @@ void produce_random_data(struct block *block) {
         block->data[i] = rand() % MAX;
     }
 }
+void *init_thread(void *args) {
 
+    pthread_mutex_lock(&merge_mutex);
+
+    // do some work - in this case sleep for 5 seconds
+    for(int i = 0; i < 5; ++i) {
+        sleep(1);
+        printf("thread %d: working hard [%d/5]\n", thread_id, i + 1);
+    }
+    printf("thread %d: done!\n", thread_id);
+
+    // we've done our 'work', so update the count and signal that we've changed it
+    ++count;
+
+    // will release the lock and signal
+    pthread_cond_signal(&cond);
+    pthread_mutex_unlock(&mutex);
+
+    return NULL;
+}
 int main(int argc, char *argv[]) {
         long size;
 
@@ -148,28 +181,31 @@ int main(int argc, char *argv[]) {
     gettimeofday(&start_wall_time, NULL);
     times(&start_times);
 
+
+   //In the main thread.
+
     pthread_mutex_lock(&merge_mutex);
 
     //Create 7 threads
-    pthread_t threads[THREAD_NUM];
+struct thread_info threadInfo;
+
     for(int i=0;i<THREAD_NUM;i++){
-        pthread_create(&threads[i],NULL,&merge_sort,(void *)&block);
+        //the size is depends on the work_count.
+        pthread_create(&threadInfo.thread[i],NULL,init_thread,(void *)&block);
         printf("Thread %d created \n",i);
     }
 
     printf("The main thread: start \n");
+    printf("The thread_count is %d \n", thread_count);
 
-    while(count != THREAD_NUM){
-        pthread_cond_wait(&merge_cond,&merge_mutex);
-        printf("main thread: awoke, count is now %d \n", count);
+    while(thread_count != THREAD_NUM){
+        pthread_cond_wait(&main_cond,&merge_mutex);
+        printf("main thread: awoke, count is now %d \n", thread_count);
     }
 
     pthread_mutex_unlock(&merge_mutex);
     printf("main thread: done \n");
 
-
-
-    merge_sort(&block);
     
     gettimeofday(&finish_wall_time, NULL);
     times(&finish_times);

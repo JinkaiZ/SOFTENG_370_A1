@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -157,6 +157,7 @@ int main(int argc, char *argv[]) {
     }
 
     int total_bytes_to_read = sizeof(int) * left_block.size;
+    //the limit of the pipe
     int max_allowed_bytes = 65536;
     int sizeT = total_bytes_to_read / max_allowed_bytes;
 
@@ -170,20 +171,19 @@ int main(int argc, char *argv[]) {
         // Close input
         close(my_pipe[1]);
         merge_sort(&right_block);
-
+        //If the size smaller than the pipe capacity. read it in one time.
         if(left_block.size < 65536){
             int reading = read(my_pipe[0], left_block.data, left_block.size * sizeof(int));
 
-            printf("The reading is %d \n", reading);
         }
         else {
-
+             //read it at the max size each time
             for (int i = 0; i < sizeT; i++) {
                 int reading = read(my_pipe[0], &left_block.data[(i * 65536) / sizeof(int)], 65536);
-                printf("The reading is %d \n", reading);
             }
         }
         close(my_pipe[0]);
+
         merge(&left_block, &right_block);
 
         if (block.size < 1025)
@@ -207,25 +207,18 @@ int main(int argc, char *argv[]) {
 
         close(my_pipe[0]);
         merge_sort(&left_block);
-
+        //If the size smaller than the pipe capacity. write it in one time.
         if(left_block.size < 65536){
             int w = write(my_pipe[1], left_block.data, left_block.size * sizeof(int));
-            // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
-            printf("The writing result %d \n", w);
         }
         else {
-
+            //write it at the max size each time
             for (int i = 0; i < sizeT; i++) {
                 int w = write(my_pipe[1], &left_block.data[(i * 65536) / sizeof(int)], 65536);
-                // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
-                printf("The writing result %d \n", w);
-
             }
         }
         close(my_pipe[1]);
             exit(EXIT_SUCCESS);
     }
-
-
 
 }

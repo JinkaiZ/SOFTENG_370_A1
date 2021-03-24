@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -28,15 +28,13 @@
 #define MAX     1000
 #define SPLIT   16
 
-
+static pthread_mutex_t merge_mutex;
 struct combine {
         struct block {
             int size;
             int *data;
         }block;
-
     int depth;
-
 };
 
 
@@ -106,10 +104,8 @@ void *merge_sort(void *combine) {
        left_block.depth = merge_combine->depth +1;
        right_block.depth = merge_combine->depth + 1;
 
-
-
-
-        if (left_block.depth < 4) {
+        pthread_mutex_lock(&merge_mutex);
+        if (left_block.depth < 3) {
 
             pid_t pid = fork();
 
@@ -121,6 +117,7 @@ void *merge_sort(void *combine) {
             else if (pid > 0){
 
                 merge_sort(&right_block);
+                //Wait for the child process.
                 wait(NULL);
                 merge(&left_block.block, &right_block.block);
                 munmap(NULL,merge_combine->block.size * sizeof(int));
@@ -129,7 +126,6 @@ void *merge_sort(void *combine) {
             else{
                 printf("ChildProcess created ,the depth is %d \n",left_block.depth);
                 merge_sort(&left_block);
-
                 exit(EXIT_SUCCESS);
             }
 
@@ -139,7 +135,7 @@ void *merge_sort(void *combine) {
             merge_sort(&left_block);
             merge(&left_block.block, &right_block.block);
         }
-
+        pthread_mutex_unlock(&merge_mutex);
     } else {
 
         insertion_sort(&merge_combine->block);
@@ -166,8 +162,7 @@ int main(int argc, char *argv[]) {
 
         struct combine combine;
     combine.block.size = (int)pow(2, size);
-    //combine.count = 0;
-    combine.depth = 0;
+    combine.depth = -1;
     combine.block.data = mmap(NULL, combine.block.size * sizeof(int), PROT_READ |PROT_WRITE, MAP_ANONYMOUS | MAP_SHARED, -1,0);
 
 
@@ -177,8 +172,6 @@ int main(int argc, char *argv[]) {
     }
 
     produce_random_data(&combine.block);
-
-
 
     struct timeval start_wall_time, finish_wall_time, wall_time;
     struct tms start_times, finish_times;

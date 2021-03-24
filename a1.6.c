@@ -2,8 +2,8 @@
     The Hybrid Merge Sort to use for Operating Systems Assignment 1 2021
     written by Robert Sheehan
 
-    Modified by: put your name here
-    UPI: put your login here
+    Modified by: Jinkai Zhang
+    UPI: Jzha541
 
     By submitting a program you are claiming that you and only you have made
     adjustments and additions to this code.
@@ -34,7 +34,6 @@ struct combine {
         }block;
 
     int depth;
-
 };
 
 
@@ -107,7 +106,7 @@ void *merge_sort(void *combine) {
 
 
 
-        if (left_block.depth < 4) {
+        if (left_block.depth < 3) {
 
             int total_bytes_to_read = sizeof(int) * left_block.block.size;
             int max_allowed_bytes = 65536;
@@ -122,7 +121,6 @@ void *merge_sort(void *combine) {
 
             pid_t pid = fork();
 
-
             if(pid <0) {
                 fprintf(stderr, "Fork failed");
                 exit(EXIT_FAILURE);
@@ -136,13 +134,11 @@ void *merge_sort(void *combine) {
                 if(left_block.block.size < 65536){
                     int reading = read(my_pipe[0], left_block.block.data, left_block.block.size * sizeof(int));
 
-                    //printf("The reading is %d \n", reading);
                 }
                 else {
 
                     for (int i = 0; i < sizeT; i++) {
                         int reading = read(my_pipe[0], &left_block.block.data[(i * 65536) / sizeof(int)], 65536);
-                        //printf("The reading is %d \n", reading);
                     }
                 }
 
@@ -157,15 +153,11 @@ void *merge_sort(void *combine) {
 
                 if(left_block.block.size < 65536){
                     int w = write(my_pipe[1], left_block.block.data, left_block.block.size * sizeof(int));
-                    // printf("Thedress index %d \n", (i * max_allowed_bytes / sizeof(int)));
-                    //printf("The writing result %d \n", w);
                 }
                 else {
 
                     for (int i = 0; i < sizeT; i++) {
                         int w = write(my_pipe[1], &left_block.block.data[(i * 65536) / sizeof(int)], 65536);
-                        //printf("The writing result %d \n", w);
-
                     }
                 }
 
@@ -206,8 +198,7 @@ int main(int argc, char *argv[]) {
 
         struct combine combine;
     combine.block.size = (int)pow(2, size);
-    //combine.count = 0;
-    combine.depth = 0;
+    combine.depth = -1;
     combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
 
 
@@ -217,8 +208,6 @@ int main(int argc, char *argv[]) {
     }
 
     produce_random_data(&combine.block);
-
-
 
     struct timeval start_wall_time, finish_wall_time, wall_time;
     struct tms start_times, finish_times;
