@@ -33,7 +33,6 @@ struct combine
     } block;
 
     int depth;
-    int count;
 };
 
 void print_data(struct block *block)
