@@ -9,9 +9,9 @@
     adjustments and additions to this code.
  */
 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <unistd.h> 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <sys/resource.h>
 #include <stdbool.h>
@@ -20,36 +20,41 @@
 #include <math.h>
 #include <pthread.h>
 
-#define SIZE    4
-#define MAX     1000
-#define SPLIT   16
+#define SIZE 4
+#define MAX 1000
+#define SPLIT 16
 
-
-struct combine {
-        struct block {
-            int size;
-            int *data;
-        }block;
+struct combine
+{
+    struct block
+    {
+        int size;
+        int *data;
+    } block;
 
     int depth;
     int count;
 };
 
-
-void print_data(struct block *block) {
+void print_data(struct block *block)
+{
     for (int i = 0; i < block->size; ++i)
         printf("%d ", block->data[i]);
     printf("\n");
 }
 
 /* The insertion sort for smaller halves. */
-void insertion_sort(struct block *block) {
-    for (int i = 1; i < block->size; ++i) {
-        for (int j = i; j > 0; --j) {
-            if (block->data[j-1] > block->data[j]) {
+void insertion_sort(struct block *block)
+{
+    for (int i = 1; i < block->size; ++i)
+    {
+        for (int j = i; j > 0; --j)
+        {
+            if (block->data[j - 1] > block->data[j])
+            {
                 int temp;
-                temp = block->data[j-1];
-                block->data[j-1] = block->data[j];
+                temp = block->data[j - 1];
+                block->data[j - 1] = block->data[j];
                 block->data[j] = temp;
             }
         }
@@ -57,70 +62,79 @@ void insertion_sort(struct block *block) {
 }
 
 /* Combine the two halves back together. */
-void merge(struct block *left, struct block *right) {
+void merge(struct block *left, struct block *right)
+{
     int *combined = calloc(left->size + right->size, sizeof(int));
-    if (combined == NULL) {
+    if (combined == NULL)
+    {
         perror("Allocating space for merge.\n");
         exit(EXIT_FAILURE);
     }
-        int dest = 0, l = 0, r = 0;
-        while (l < left->size && r < right->size) {
-                if (left->data[l] < right->data[r])
-                        combined[dest++] = left->data[l++];
-                else
-                        combined[dest++] = right->data[r++];
-        }
-        while (l < left->size)
-                combined[dest++] = left->data[l++];
-        while (r < right->size)
-                combined[dest++] = right->data[r++];
+    int dest = 0, l = 0, r = 0;
+    while (l < left->size && r < right->size)
+    {
+        if (left->data[l] < right->data[r])
+            combined[dest++] = left->data[l++];
+        else
+            combined[dest++] = right->data[r++];
+    }
+    while (l < left->size)
+        combined[dest++] = left->data[l++];
+    while (r < right->size)
+        combined[dest++] = right->data[r++];
     memmove(left->data, combined, (left->size + right->size) * sizeof(int));
     free(combined);
 }
 
 /* Merge sort the data. */
-void *merge_sort(void *combine) {
+void *merge_sort(void *combine)
+{
     struct combine *merge_combine = (struct combine *)combine;
 
-    if (merge_combine->block.size > SPLIT) {
+    if (merge_combine->block.size > SPLIT)
+    {
         struct combine left_block;
         struct combine right_block;
         left_block.block.size = merge_combine->block.size / 2;
         left_block.block.data = merge_combine->block.data;
         right_block.block.size = merge_combine->block.size - left_block.block.size; // left_block.size + (block->size % 2);
         right_block.block.data = merge_combine->block.data + left_block.block.size;
-        left_block.depth = merge_combine->depth +1;
-        right_block.depth = merge_combine->depth + 1;
+        left_block.depth = merge_combine->depth + 1;
 
         pthread_t thread;
         int s = 1;
 
-        if (left_block.depth < 3) {
-            s = pthread_create(&thread, NULL, merge_sort, (void *) &left_block);
+        if (left_block.depth < 3)
+        {
+            s = pthread_create(&thread, NULL, merge_sort, (void *)&left_block);
         }
 
         merge_sort(&right_block);
 
-        if(s == 0){
-            printf("thread created, the depth is %d \n",left_block.depth);
-            pthread_join(thread,NULL);
+        if (s == 0)
+        {
+            printf("thread created, the depth is %d \n", left_block.depth);
+            pthread_join(thread, NULL);
         }
-        else{
+        else
+        {
             merge_sort(&left_block);
         }
-      
-        
-        merge(&left_block.block, &right_block.block);
 
-    } else {
+        merge(&left_block.block, &right_block.block);
+    }
+    else
+    {
         insertion_sort(&merge_combine->block);
     }
 }
 
 /* Check to see if the data is sorted. */
-bool is_sorted(struct block *block) {
+bool is_sorted(struct block *block)
+{
     bool sorted = true;
-    for (int i = 0; i < block->size - 1; i++) {
+    for (int i = 0; i < block->size - 1; i++)
+    {
         if (block->data[i] > block->data[i + 1])
             sorted = false;
     }
@@ -128,30 +142,36 @@ bool is_sorted(struct block *block) {
 }
 
 /* Fill the array with random data. */
-void produce_random_data(struct block *block) {
+void produce_random_data(struct block *block)
+{
     srand(1); // the same random data seed every time
 
-    for (int i = 0; i < block->size; i++) {
+    for (int i = 0; i < block->size; i++)
+    {
         block->data[i] = rand() % MAX;
     }
 }
 
-int main(int argc, char *argv[]) {
-        long size;
+int main(int argc, char *argv[])
+{
+    long size;
 
-        if (argc < 2) {
-                size = SIZE;
-        } else {
-                size = atol(argv[1]);
-        }
+    if (argc < 2)
+    {
+        size = SIZE;
+    }
+    else
+    {
+        size = atol(argv[1]);
+    }
 
-        struct combine combine;
+    struct combine combine;
     combine.block.size = (int)pow(2, size);
     combine.depth = -1;
     combine.block.data = (int *)calloc(combine.block.size, sizeof(int));
 
-
-    if (combine.block.data == NULL) {
+    if (combine.block.data == NULL)
+    {
         perror("Unable to allocate space for data.\n");
         exit(EXIT_FAILURE);
     }
@@ -164,7 +184,7 @@ int main(int argc, char *argv[]) {
     times(&start_times);
 
     merge_sort(&combine);
-    
+
     gettimeofday(&finish_wall_time, NULL);
     times(&finish_times);
     timersub(&finish_wall_time, &start_wall_time, &wall_time);
